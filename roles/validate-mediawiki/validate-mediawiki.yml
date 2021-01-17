@@ -1,0 +1,10 @@
+
+- name: "Validate "
+  command: "{{item}}" 
+    - mysql -u root -p"{{MYPWD}}"
+    - SHOW DATABASES
+    - SHOW GRANTS FOR 'wiki'@'localhost'
+    - exit
+
+- name: validate mediawiki
+  command: 

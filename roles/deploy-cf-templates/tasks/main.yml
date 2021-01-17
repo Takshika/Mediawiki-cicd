@@ -1,0 +1,3 @@
+---
+- block:
+    - import_tasks: deploy_templates.yml 

@@ -1,0 +1,4 @@
+# Each environment must be defined here
+[NONPROD]
+NONPROD ansible_connection=local
+

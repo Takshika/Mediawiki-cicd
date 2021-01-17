@@ -1,0 +1,10 @@
+---
+- name: Deploying cloud formation template via ansbile stack
+  cloudformation:
+    stack_name: "{{ stack_prefix }}"
+    state: present
+    disable_rollback: True
+    template_url: https://"{{ bucketname }}".s3.amazonaws.com/"{{subdirectory}}"/"{{master_template}}"
+    template_parameters: "{{ lookup('file', 'parameters/instance_parameters.json') | from_json }}"
+    tags:
+      Name: "{{ stack_prefix }}"

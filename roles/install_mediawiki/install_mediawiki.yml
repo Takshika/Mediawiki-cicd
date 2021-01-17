@@ -1,0 +1,114 @@
+---
+- include_vars: ../../../group_vars/install-mediawiki.yml
+
+#Install Operating System Package
+
+- name: Reset dnf module
+  command: dnf module reset php
+
+- name: Enable php
+  command: dnf module enable php:7.4
+  
+- name: Wait for system to become reachable over SSH
+  dnf:
+    name:
+      - httpd 
+      - php
+      - php-mysqlnd 
+      - php-gd php-xml 
+      - mariadb-server 
+      - mariadb 
+      - php-mbstring 
+      - php-json
+    state: present    
+
+#Database (MySQL) post-install configuration
+- name: Start MYSQL service
+  service = mariadb state = started
+
+- name: Mariadb secure installation
+  command: printf ""{{dbpassword}}"\n n\n n\n n\n y\n y\n y\n" | sudo mysql_secure_installation
+
+# Login to MySQL
+
+- name: create mysql user
+   mysql_user:
+      name: root
+      host: "{{item}}"
+      password: "{{ mysql_root_password }}"
+      priv: "*.*:ALL,GRANT"
+      host_all: yes
+    with_items:
+      - 127.0.0.1
+      - ::1
+      - localhost
+
+- name: Login to MySQL
+  command : "{{items}}"
+   - mysql -u root -p$"{{MYPWD}}" # Password is saved in vault files(secret.yml)
+   - CREATE DATABASE database_name;
+
+# Download MediaWiki
+
+- name: create project directory "{{ project_dir }}"
+  file: state=directory path="{{ project_dir }}"
+
+- name: download mediawiki sources
+  get_url: url={{ mediawiki_url }} dest="{{ project_dir }}"
+
+- name: download GPG Signature
+  get_url: url="{{ gpg_url_signature }}" dest="{{ project_dir }}"
+
+- name: unzip the mediawiki file
+  command: tar -zxf /home/username/mediawiki-1.35.1.tar.gz
+
+- name: create a symbolic link
+  file:
+    src: /home/username/mediawiki-1.35.1/
+    dest: /var/www/mediawiki
+    state: link
+    owner: apache
+    group: apache
+    
+# Webserver (Apache) post-install configuration
+- name: Replace path for DocumentRoot
+- lineinfile:
+    path: /etc/httpd/conf/httpd.conf
+    regexp: '^DocumentRoot='
+    line: 'DocumentRoot "/var/www"'
+
+- name: insert below lines after DocumentRoot
+  blockinfile:
+    path: /etc/httpd/conf/httpd.conf
+    insertafter: "DocumentRoot "/var/www""
+    content: |
+      <Directory "/var/www">     <-- this is the SECOND "<Directory" entry, not the 'root' one
+      DirectoryIndex index.html index.html.var index.php
+
+- name: restart the service
+  service: 
+    name: httpd
+    state: started
+
+# Firewall configuration
+- name: here we enable http in firewall rules firewalld
+  service: http
+    state: enabled 
+    permanent: true
+    zone: public
+
+- name: here we enable https in firewall rules firewalld
+  service: https
+  state: enabled 
+  permanent: true
+  zone: public
+
+- name: restart the service
+  service: 
+    name: firewalld
+    state: started
+
+# Security (selinux) configuration
+- name: Disable SELinux
+  selinux:
+    state: disabled

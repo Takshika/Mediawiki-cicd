@@ -1,0 +1,15 @@
+---
+- name: "Step 1 - Validate cloudformation templates using aws command"
+  command: aws cloudformation validate-template --template-url https://s3.amazonaws.com/{{ bucketname }}/{{ subdirectory }}/{{ item | basename }}
+  register: validate_results
+  with_fileglob: 
+   - cf_templates/*.json
+   - cf_templates/*.yml
+   - cf_templates/*.yaml
+
+- name: "Delete temporary files - post"  
+  file:
+    path: ./tmp/{{ item | basename }}
+    state: absent
+  with_fileglob: 
+   - cf_templates/*

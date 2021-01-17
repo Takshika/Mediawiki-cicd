@@ -1,0 +1,5 @@
+--- 
+master_template: cf_template.yaml
+bucketname: <bucketname>
+subdirectory: CICD/
+stack_name: "{{ stack_prefix }}"

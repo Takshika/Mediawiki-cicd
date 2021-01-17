@@ -1,0 +1,4 @@
+---
+- block:
+    - import_tasks: get_secrets.yml 
+    - import_tasks: prepare_templates.yml  
