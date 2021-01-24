@@ -10,120 +10,52 @@
       },
       "InstanceAMI" : {
         "Description" : "AMI to use for instances.",
-        "Default" : "ami-00b847e6e1cf1e1a3",
+        "Default" : "ami-096fda3c22c1c990a",
         "Type" : "String"
       },
       "EC2KeyPair":{
         "Type": "AWS::EC2::KeyPair::KeyName",
+        "Default": "test",
         "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance"
+      },
+      "SecurityGroup":{
+        "Type": "AWS::EC2::SecurityGroup::Id",
+        "Default": "sg-03c0c22a75ff6c38b",
+        "Description": "Name of an existing security group"
       }
-      
-      
     },
     "Resources" : {
-      "INSTANCEIAMROLE": {
-            "Type": "AWS::IAM::Role",
-            "Properties": {
-                "RoleName": "Mediawiki-iam",
-                "AssumeRolePolicyDocument": {
-                    "Version": "2012-10-17",
-                    "Statement": [
-                        {
-                            "Effect": "Allow",
-                            "Principal": {
-                                "Service": [
-                                    "ec2.amazonaws.com"
-                                ]
-                            },
-                            "Action": [
-                                "sts:AssumeRole"
-                            ]
-                        }
-                    ]
-                }
-            }
-        },
-        "InstanceProfile": {
-            "Type": "AWS::IAM::InstanceProfile",
-            "Properties": {
-                "InstanceProfileName": "Mediawiki-instanceprofile-iam",
-                "Path": "/",
-                "Roles": [
-                    {
-                        "Ref": "INSTANCEIAMROLE"
-                    }
-                ]
-            }
-        },
-      "InstanceSecurityGroup" : {
-            "Type" : "AWS::EC2::SecurityGroup",
+
+        "MediaWikicicdinstance" : {
+            "Type" : "AWS::EC2::Instance", 
+            "CreationPolicy": {
+              "ResourceSignal": {
+                "Count": "1",
+                "Timeout": "PT15M"
+              }
+            },
             "Properties" : {
-                "GroupName" : "mediawiki-sg",
-                "GroupDescription" : "Security Group for Instance",
-                "VpcId" : "{{ myVPC }}",
-                "SecurityGroupIngress" : [
-                    { "IpProtocol" : "tcp", "FromPort" : 443, "ToPort" : 443, "CidrIp" : "0.0.0.0/0"},
-                    { "IpProtocol" : "tcp", "FromPort" : 80, "ToPort" : 80, "CidrIp" : "0.0.0.0/0"},
-                    { "IpProtocol" : "tcp", "FromPort" : 22, "ToPort" : 22, "CidrIp" : "0.0.0.0/0"}
-                ],
-                "SecurityGroupEgress" : [
-                    { "IpProtocol" : "-1", "CidrIp" : "0.0.0.0/0"} 
-                ],
-                "Tags": [
+                "AvailabilityZone": "us-east-1a",
+                "KeyName" :"test",
+                "ImageId" : { "Ref" : "InstanceAMI" },
+                "InstanceType" : { "Ref" : "Ec2instancetype" },
+                "SecurityGroupId": { "Ref": "SecurityGroup"},
+                "Tags":[
                     {
                         "Key": "Name",
-                        "Value": "mediawiki-sg"
+                        "Value":"mediawiki-instance"
                     }
                 ]
             }
-        },
+    }
+ },
 
-      "Ec2Instance" : {
-        "Type" : "AWS::EC2::Instance", 
-        "Properties" : {
-            "AvailabilityZone": "us-east-1a",
-            "KeyName" :{ "Ref" : "EC2KeyPair" },
-            "ImageId" : { "Ref" : "InstanceAMI" },
-            "InstanceType" : { "Ref" : "Ec2instancetype" },
-            "IamInstanceProfile": [{"Ref": "INSTANCEIAMROLE"}],
-            "SecurityGroups" : [{ "Ref" : "Ec2SecurityGroup" }],
-            "Tags":[
-                {
-                    "Key": "Name",
-                    "Value":"mediawiki-instance"
-                }
-            ]
-        },
-        "WaitCondition": {
-            "CreationPolicy" : {
-                "Type": "AWS::CloudFormation::WaitCondition",
-                "ResourceSignal" : {    
-                    "Count" : 1,
-                    "Timeout" : "PT2M"
-                }
-            }  
-        }
+    "Outputs" : {
 
-    },
- 
- "Outputs" : {
-
-        "Ec2SecurityGroup" : {
-            "Description" : "mediawiki-sg security group defination",
-            "Value" : { "Ref" : "Ec2SecurityGroup" },
-            "Export": {"Name": "Ec2SecurityGroup "}
-        },
-
-          "INSTANCEIAMROLE" : {
-          "Description" : "Mediawiki-iam role definition",
-          "Value" : { "Ref" : "INSTANCEIAMROLE" },
-          "Export": {"Name": "INSTANCEIAMROLE "}
-        },
         "Ec2Instance" : {
             "Description" : "Mediawiki instance",
-            "Value" : { "Ref" : "Ec2Instance" },
-            "Export": {"Name": "Ec2Instance "}
-          }
-    }
+            "Value" : { "Ref" : "MediaWikicicdinstance" },
+            "Export": {"Name": "MediaWikicicdinstance"}
+        }
 }
 }

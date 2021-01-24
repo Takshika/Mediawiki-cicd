@@ -1,6 +1,5 @@
 ---
 mediawiki_url: https://releases.wikimedia.org/mediawiki/1.35/mediawiki-1.35.1.tar.gz
 project_dir: /home/username
-gpg_url_signature: https://releases.wikimedia.org/mediawiki/1.35/mediawiki-1.35.1.tar.gz.sig 
 
  

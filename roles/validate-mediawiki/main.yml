@@ -1,3 +1,0 @@
----
-- block:
-    - import_tasks: validate-mediawiki.yml

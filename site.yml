@@ -1,36 +1,55 @@
 # Prepare CloudFormation Templates
 - name: Preparing CloudFormation Templates
+  hosts: "{{ env }}"
   roles:
     - prepare-cf-templates
   gather_facts: false 
+  become: true
   tags: prepare
 
 # Validate CloudFormation Templates
 - name: Validating CloudFormation Templates
+  hosts: "{{ env }}"
   roles:
     - validate-cf-templates 
   gather_facts: false
+  become: true
   tags: validate
 
 # Deploy CloudFormation Templates
 - name: Deploying CloudFormation Templates  
+  hosts: "{{ env }}"
   roles:
     - deploy-cf-templates
   gather_facts: false
+  become: true
   tags: deploy
+
+
+# Reboot CloudFormation Templates
+- name: Deploying CloudFormation Templates  
+  hosts: '/var/lib/jenkins/workspace/final/hosts'
+  roles:
+    - reboot-instance
+  gather_facts: false
+  become: true
+  tags: reboot
+
+
+#Deploy CloudFormation Templates
+- name: lOGIN  
+  hosts: "{{ env }}"
+  roles:
+    - login
+  gather_facts: false
+  become: true
+  tags: login
 
 # Install Mediawiki
 - name: Install mediawiki
+  hosts: "{{ env }}"
   roles:
-    - install-mediawiki
+    - install_mediawiki
   gather_facts: false
   become: true
   tags: install-mediawiki
-
-  # Validate Mediawiki
-- name: Validate Mediawiki
-  roles:
-    - validate-mediawiki
-  gather_facts: false
-  become: true
-  tags: validate-mediawiki

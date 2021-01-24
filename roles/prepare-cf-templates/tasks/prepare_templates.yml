@@ -13,9 +13,10 @@
   with_fileglob: 
    - cf_templates/*
 
-- name: "upload Cloudformation templates to s3"
+
+- name: "Upload Cloudformation templates to s3"
   aws_s3:
-    bucket: "{{ bucketname }}"
+    bucket: "{{ bucket_name }}"
     object: "{{ subdirectory }}/{{ item | basename }}"
     src: ./tmp/{{ item | basename }}
     encrypt: yes

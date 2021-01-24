@@ -1,10 +1,11 @@
 ---
 - name: Deploying cloud formation template via ansbile stack
   cloudformation:
-    stack_name: "{{ stack_prefix }}"
+    stack_name: "MediaWiki-CICD-Pipeline-instance"
     state: present
     disable_rollback: True
-    template_url: https://"{{ bucketname }}".s3.amazonaws.com/"{{subdirectory}}"/"{{master_template}}"
-    template_parameters: "{{ lookup('file', 'parameters/instance_parameters.json') | from_json }}"
+    region: "us-east-1"
+    # template_url: https://"{{ bucket_name }}".s3.amazonaws.com/CICD/"{{ master_template }}"
+    template_url: https://takshika-cftemplate.s3.amazonaws.com/CICD/cf_template.json
     tags:
-      Name: "{{ stack_prefix }}"
+      Name: MediaWiki-CICD-Pipeline-instance

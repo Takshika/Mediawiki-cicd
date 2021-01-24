@@ -1,78 +1,103 @@
 ---
 - include_vars: ../../../group_vars/install-mediawiki.yml
 
-#Install Operating System Package
-
 - name: Reset dnf module
-  command: dnf module reset php
+  command: dnf module reset php -y
 
 - name: Enable php
-  command: dnf module enable php:7.4
-  
+  command: dnf module enable php:7.4 -y
+
 - name: Wait for system to become reachable over SSH
   dnf:
     name:
-      - httpd 
-      - php
-      - php-mysqlnd 
-      - php-gd php-xml 
-      - mariadb-server 
-      - mariadb 
-      - php-mbstring 
-      - php-json
-    state: present    
+    - httpd
+    - php
+    - php-mysqlnd
+    - php-gd
+    - php-xml
+    - mariadb-server
+    - mariadb
+    - php-mbstring
+    - php-json
+    state: present
 
-#Database (MySQL) post-install configuration
 - name: Start MYSQL service
-  service = mariadb state = started
+  service:
+    name: mariadb
+    state: started
 
 - name: Mariadb secure installation
-  command: printf ""{{dbpassword}}"\n n\n n\n n\n y\n y\n y\n" | sudo mysql_secure_installation
+#      command: printf ""{{dbpassword}}"\n n\n n\n n\n y\n y\n y\n" | sudo mysql_secure_installation
+  command: printf "y\n n\n n\n n\n y\n y\n y\n" | sudo mysql_secure_installation
 
-# Login to MySQL
+- name: python3-pip
+  command:  dnf install python2-pip -y
 
-- name: create mysql user
-   mysql_user:
-      name: root
-      host: "{{item}}"
-      password: "{{ mysql_root_password }}"
-      priv: "*.*:ALL,GRANT"
-      host_all: yes
-    with_items:
-      - 127.0.0.1
-      - ::1
-      - localhost
+- name: pip install
+  pip:
+    name: pymysql
+    state: present
 
-- name: Login to MySQL
-  command : "{{items}}"
-   - mysql -u root -p$"{{MYPWD}}" # Password is saved in vault files(secret.yml)
-   - CREATE DATABASE database_name;
+- name: install ansible-galaxy role
+  command: ansible-galaxy collection install community.mysql
 
-# Download MediaWiki
+- name: update mysql root password for all root accounts
+  mysql_user:
+    name: "wiki"
+    password: "THISpasswordSHOULDbeCHANGED"
+    host: "{{ item }}"
+    login_user: "root"
+    login_password: "y"
+    priv: "*.*:ALL,GRANT"
+    check_implicit_admin: yes
+  with_items:
+    - 127.0.0.1
+    - ::1
+    - localhost
 
-- name: create project directory "{{ project_dir }}"
-  file: state=directory path="{{ project_dir }}"
+- name: Create a new database with name 'bobdata'
+  mysql_db:
+    name: wikimedia
+    state: present
+    login_user: root
+    login_password: "y"
+  register: mysql_db
 
-- name: download mediawiki sources
-  get_url: url={{ mediawiki_url }} dest="{{ project_dir }}"
+- name: Debug
+  debug: "{{ item }}"
+  with_items: mysql_db.stdout_lines
+#      when: mysql_db.rc != 0
 
-- name: download GPG Signature
-  get_url: url="{{ gpg_url_signature }}" dest="{{ project_dir }}"
+- name: check if DB exists
+  shell: mysql --host=local --user=root --password="y" -e 'SHOW DATABASES;' | grep -c  wikimedia
+  register: dbstatus
+  failed_when: dbstatus.rc == 0
 
-- name: unzip the mediawiki file
-  command: tar -zxf /home/username/mediawiki-1.35.1.tar.gz
+- name: Stop service httpd, if running
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  with_items:
+    - mariadb
+    - httpd
 
-- name: create a symbolic link
-  file:
-    src: /home/username/mediawiki-1.35.1/
-    dest: /var/www/mediawiki
-    state: link
-    owner: apache
-    group: apache
-    
+- name: Download file and force basic auth
+  get_url:
+    url: "{{ item }}"
+    dest: "/home/ec2-user"
+  with_items:
+    - "{{ mediawiki_url }}"
+
+
+- name: unzip
+  unarchive:
+    src: /home/ec2-user/mediawiki-1.35.1.tar.gz
+    dest: /var/www
+
 # Webserver (Apache) post-install configuration
 - name: Replace path for DocumentRoot
-- lineinfile:
+  lineinfile:
     path: /etc/httpd/conf/httpd.conf
     regexp: '^DocumentRoot='
     line: 'DocumentRoot "/var/www"'
@@ -80,35 +105,48 @@
 - name: insert below lines after DocumentRoot
   blockinfile:
     path: /etc/httpd/conf/httpd.conf
-    insertafter: "DocumentRoot "/var/www""
+    insertafter: 'DocumentRoot "/var/www"'
     content: |
       <Directory "/var/www">     <-- this is the SECOND "<Directory" entry, not the 'root' one
       DirectoryIndex index.html index.html.var index.php
 
+- name: create a symbolic link
+  file:
+    src: /home/ec2-user/mediawiki-1.35.1/
+    dest: /var/www/mediawiki
+    state: link
+    owner: apache
+    group: apache
+    force: yes
+
 - name: restart the service
-  service: 
+  service:
     name: httpd
     state: started
 
 # Firewall configuration
+- name: firewalld install
+  command: dnf install firewalld -y
+
 - name: here we enable http in firewall rules firewalld
-  service: http
-    state: enabled 
+  firewalld:
+    service: "{{ item }}"
+    state: enabled
     permanent: true
     zone: public
-
-- name: here we enable https in firewall rules firewalld
-  service: https
-  state: enabled 
-  permanent: true
-  zone: public
+  with_items:
+    - http
+    - https
+  notify:
+    --firewalld
 
 - name: restart the service
-  service: 
+  service:
     name: firewalld
-    state: started
+    state: restarted
 
-# Security (selinux) configuration
-- name: Disable SELinux
-  selinux:
-    state: disabled
+- name: Disable firewall
+  lineinfile:
+    path: /etc/selinux/config
+    regexp: '^SELINUX='
+    line: 'SELINUX=disabled'

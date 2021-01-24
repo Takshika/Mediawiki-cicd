@@ -1,31 +1,33 @@
 node {
-    checkout(scm)
-    loadEnvironmentVariables("parameters/${BRANCH_NAME}.properties") 
+    checkout(scm) 
+    scmVars = checkout(scm)
+    // echo "scmVars.BRANCH_NAME: ${scmVars.GIT_BRANCH.substring(7)}"
+    // BRANCH_NAME = "${scmVars.GIT_BRANCH.substring(7)}"
+    loadEnvironmentVariables("parameters/NONPROD.properties")  
     withCredentials([usernamePassword(credentialsId: 'vault', passwordVariable: 'VAULT_PASSWORD', usernameVariable: 'VAULT_USER')]) {
-       
+  
         stage ('CF Templates Build'){
-            sh "make BRANCH='${BRANCH_NAME}' build-CF"
+            sh 'ansible-playbook site.yml -e "env=$BRANCH_NAME" --tags "prepare"'
         }
 
         stage ('CF Templates Validation'){
-            sh "make BRANCH='${BRANCH_NAME}' validate-CF"
+            sh 'ansible-playbook site.yml -e "env=$BRANCH_NAME"  --tags "validate"'
         }
 
         stage ('CF Templates Deployment'){
-            sh "make BRANCH='${BRANCH_NAME}' deploy-CF" 
+            sh 'ansible-playbook site.yml -e "env=$BRANCH_NAME"  --tags "deploy"'
         }
 
         stage ('Instance Validation'){
-            sh "make BRANCH='${BRANCH_NAME}' validate-instance" 
+            sh 'python scripts/update_hosts.py --extra-vars "@vaults/secret.yml"'
+            sh 'chmod +x scripts/vault.py'
         }
 
         stage ('Meduawiki Installation'){
-            sh "make BRANCH='${BRANCH_NAME}' install-mediawiki"
+            //  sh 'ansible-playbook site.yml --vault-password-file scripts/vault.py --extra-vars "@vaults/secret.yml" -i hosts --tags=install-mediawiki'
+            sh 'ansible-playbook site.yml --extra-vars "env=$BRANCH_NAME" --tags=install-mediawiki'
         }
 
-        stage ('Validate Validatation'){
-            sh "make BRANCH='${BRANCH_NAME}' validate-mediawiki"
-        }
     } 
 }    
 
