@@ -6,6 +6,6 @@
     disable_rollback: True
     region: "us-east-1"
     # template_url: https://"{{ bucket_name }}".s3.amazonaws.com/CICD/"{{ master_template }}"
-    template_url: https://takshika-cftemplate.s3.amazonaws.com/CICD/cf_template.json
+
     tags:
       Name: MediaWiki-CICD-Pipeline-instance
