@@ -1,9 +1,9 @@
 --- 
 master_template: cf_template.yaml
-bucket_name: takshika-cftemplate
+bucket_name: 
 subdirectory: CICD
 stack_name: "{{ stack_prefix }}"
-VAULT_DIRECTORY: s3://takshika-cftemplate/
+VAULT_DIRECTORY: 
 ansible_ssh_pass: test
 region: us-east-1d
 STACK_PREFIX: MediaWiki-CICD-Pipeline-instance
